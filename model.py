@@ -142,7 +142,7 @@ class Model(torch.nn.Module):
                             hidden_dim=[self.hyper['d_hidden_dim'] for _ in range(self.hyper['n_f'])],
                             bias=[True, False]).to(self.device)        
         # Initialise the hidden to output weights as zero, so initially you simply keep the current abstract location to predict the next abstract location
-        self.MLP_D_a.set_weights(1, 0.0).to(self.device)
+        self.MLP_D_a.set_weights(1, 0.0)
         # Transition weights without specifying an action for use in generative model with shiny objects
         self.D_no_a = torch.nn.ParameterList([torch.nn.Parameter(torch.zeros(sum([self.hyper['n_g'][f_from] for f_from in range(self.hyper['n_f']) if self.hyper['g_connections'][f_to][f_from]])*self.hyper['n_g'][f_to])) for f_to in range(self.hyper['n_f'])]).to(self.device)
         # MLP for standard deviation of transition sample
@@ -152,7 +152,7 @@ class Model(torch.nn.Module):
         # MLP to generate mean of abstract location from downsampled abstract location, obtained by summing grounded location over sensory preferences in inference model
         self.MLP_mu_g_mem = MLP(self.hyper['n_g_subsampled'], self.hyper['n_g'], hidden_dim=[2 * g for g in self.hyper['n_g']]).to(self.device)
         # Initialise weights in last layer of MLP_mu_g_mem as truncated normal for each frequency module
-        self.MLP_mu_g_mem.set_weights(-1, [torch.tensor(truncnorm.rvs(-2, 2, size=list(self.MLP_mu_g_mem.w[f][-1].weight.shape), loc=0, scale=self.hyper['g_mem_std']), dtype=torch.float) for f in range(self.hyper['n_f'])]).to(self.device)
+        self.MLP_mu_g_mem.set_weights(-1, [torch.tensor(truncnorm.rvs(-2, 2, size=list(self.MLP_mu_g_mem.w[f][-1].weight.shape), loc=0, scale=self.hyper['g_mem_std']), dtype=torch.float) for f in range(self.hyper['n_f'])])
         # MLP to generate standard deviation of abstract location from two measures (generated observation error and inferred abstract location vector norm) of memory quality
         self.MLP_sigma_g_mem = MLP([2 for _ in self.hyper['n_g_subsampled']], self.hyper['n_g'], activation=[torch.tanh, torch.exp], hidden_dim=[2 * g for g in self.hyper['n_g']]).to(self.device)
         # MLP to generate mean of abstract location directly from shiny object presence. Outputs to object vector cell modules if they're separated, else to all abstract location modules
