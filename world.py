@@ -47,8 +47,8 @@ class World:
             self.height = env['height']
             self.sym2reward = env['sym2reward']
             self.board_locations = env['board_locations']
-            self.n_sym = env['n_sym']
-            self.n_sym_reward = env['n_sym_reward']
+            self.n_sym = env['n_symbols']
+            self.n_sym_reward = 2 * self.n_sym
         # If requested: shuffle observations from original assignments
         if randomise_observations:
             self.observations_randomise()
