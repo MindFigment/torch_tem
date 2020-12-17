@@ -50,7 +50,7 @@ if load_existing_model:
         params[key] = new_params[key]
     
     # Create a new tem model with the loaded parameters
-    tem = model.Model(params, device).to(device)
+    tem = model.Model(params).to(device)
 
     for n, p in tem.named_parameters():
         print(p.device, '', n)
