@@ -250,6 +250,7 @@ class FirstExperiment:
         world_dict['reward_locations'] = list(rewloc2reward.keys())
         world_dict['width'] = width
         world_dict['height'] = height
+        world_dict['sym2reward'] = sym2reward
 
         # x = 1 / (2 * np.max([width, height]))
         # y = 1 / (2 * np.max([width, height]))

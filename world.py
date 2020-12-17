@@ -14,7 +14,7 @@ from scipy.sparse.csgraph import shortest_path
 # Functions for generating data that TEM trains on: sequences of [state,observation,action] tuples
 
 class World:
-    def __init__(self, env, randomise_observations=False, randomise_policy=False, shiny=None):
+    def __init__(self, env, randomise_observations=False, randomise_policy=False, shiny=None, first_experiment=True):
         # If the environment is provided as a filename: load the corresponding file. If it's no filename, it's assumed to be an environment dictionary
         if type(env) == str or type(env) == np.str_:
             # Filename provided, load graph from json file
@@ -41,6 +41,14 @@ class World:
             self.n_locations = 0
             self.n_observations = 0
         
+        self.first_experiment = first_experiment
+        if self.first_experiment:
+            self.width = env['width']
+            self.height = env['height']
+            self.sym2reward = env['sym2reward']
+            self.board_locations = env['board_locations']
+            self.n_sym = env['n_sym']
+            self.n_sym_reward = env['n_sym_reward']
         # If requested: shuffle observations from original assignments
         if randomise_observations:
             self.observations_randomise()
@@ -89,6 +97,13 @@ class World:
     
     def observations_randomise(self):
         # Run through every abstract location
+        if self.first_experiment:
+            for location in self.locations:
+                # Specifying the arrangement of sensory observartions on the board
+                observations = np.random.choice(self.n_observations - self.n_sym_reward, self.width * self.height, replace=False)
+                # Put symbols on the board by swaping it with random observations
+                sym_locations = np.random.choice(self.board_locations, self.n_sym, replace=False)
+                np.put(observations, ind=sym_locations, v=list(self.sym2reward.keys()))
         for location in self.locations:
             # Pick random observation from any of the observations
             location['observation'] = np.random.randint(self.n_observations)
