@@ -15,9 +15,9 @@ def parameters():
     params = {}
     # -- World parameters
     # Does this world include the standing still action?
-    params['has_static_action'] = True
+    params['has_static_action'] = False
     # Number of available actions, excluding the stand still action (since standing still has an action vector full of zeros, it won't add to the action vector dimension)
-    params['n_actions'] = 4
+    params['n_actions'] = 5
     # Bias for explorative behaviour to pick the same action again, to encourage straight walks
     params['explore_bias'] = 2
     # Rate at which environments with shiny objects occur between training environments. Set to 0 for no shiny environments at all
