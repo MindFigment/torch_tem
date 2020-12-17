@@ -83,7 +83,10 @@ else:
     np.save(os.path.join(save_path, 'params'), params)       
     
     # And create instance of TEM with those parameters
-    tem = model.Model(params)
+    tem = model.Model(params).to(device)
+
+    for n, p in tem.named_parameters():
+        print(p.device, '', n)
     
     # Create list of environments that we will sample from during training to provide TEM with trajectory input
     envs = ['./envs/first-experiment4x4.json']
