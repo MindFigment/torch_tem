@@ -21,7 +21,7 @@ from scipy.stats import truncnorm
 import utils
 
 class Model(torch.nn.Module):
-    def __init__(self, params):
+    def __init__(self, params, device='cuda'):
         # First call super class init function to set up torch.nn.Module style model and inherit it's functionality
         super(Model, self).__init__()
         # Copy hyperparameters (e.g. network sizes) from parameter dict, usually generated from parameters() in parameters.py
@@ -145,7 +145,7 @@ class Model(torch.nn.Module):
         # Transition weights without specifying an action for use in generative model with shiny objects
         self.D_no_a = torch.nn.ParameterList([torch.nn.Parameter(torch.zeros(sum([self.hyper['n_g'][f_from] for f_from in range(self.hyper['n_f']) if self.hyper['g_connections'][f_to][f_from]])*self.hyper['n_g'][f_to])) for f_to in range(self.hyper['n_f'])])
         # MLP for standard deviation of transition sample
-        self.MLP_sigma_g_path = MLP(self.hyper['n_g'], self.hyper['n_g'], activation=[torch.tanh, torch.exp], hidden_dim=[2 * g for g in self.hyper['n_g']])
+        self.MLP_sigma_g_path = MLP(self.hyper['n_g'], self.hyper['n_g'], activation=[torch.tanh, torch.exp], hidden_dim=[2 * g for g in self.hyper['n_g']]).to(device)
         # MLP for standard devation of grounded location from retrieved memory sample        
         self.MLP_sigma_p = MLP(self.hyper['n_p'], self.hyper['n_p'], activation=[torch.tanh, torch.exp])
         # MLP to generate mean of abstract location from downsampled abstract location, obtained by summing grounded location over sensory preferences in inference model

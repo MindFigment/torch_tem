@@ -23,6 +23,8 @@ import model as model
 np.random.seed(0)
 torch.manual_seed(0)
 
+device = 'cuda'
+
 # Either load a trained model and continue training, or start afresh
 load_existing_model = False;
 if load_existing_model:
@@ -48,7 +50,7 @@ if load_existing_model:
         params[key] = new_params[key]
     
     # Create a new tem model with the loaded parameters
-    tem = model.Model(params)
+    tem = model.Model(params, device).to(device)
     # Load the model weights after training
     model_weights = torch.load(model_path + '/tem_' + str(i_start) + '.pt')
     # Set the model weights to the loaded trained model weights
