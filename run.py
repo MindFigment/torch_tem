@@ -23,7 +23,10 @@ import model as model
 np.random.seed(0)
 torch.manual_seed(0)
 
-device = 'cuda'
+if torch.cuda.is_available():
+    device = 'cuda'
+else:
+    device = 'cpu'
 
 # Either load a trained model and continue training, or start afresh
 load_existing_model = False;
@@ -159,7 +162,7 @@ for i in range(i_start, params['train_it']):
         chunk[i_step][1] = torch.stack(step[1], dim=0)    
         
     # Forward-pass this walk through the network
-    forward = tem(chunk, prev_iter)    
+    forward = tem(chunk, prev_iter).cpu()
     
     # Accumulate loss from forward pass
     loss = torch.tensor(0.0)
