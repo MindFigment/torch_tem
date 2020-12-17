@@ -51,6 +51,10 @@ if load_existing_model:
     
     # Create a new tem model with the loaded parameters
     tem = model.Model(params, device).to(device)
+
+    for n, p in tem.named_parameters():
+        print(p.device, '', n)
+
     # Load the model weights after training
     model_weights = torch.load(model_path + '/tem_' + str(i_start) + '.pt')
     # Set the model weights to the loaded trained model weights
