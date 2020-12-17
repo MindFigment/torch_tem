@@ -240,6 +240,7 @@ class FirstExperiment:
         # Creating dictionary containing whole environment structure
         world_dict = dict()
         world_dict['n_locations'] = all_locations
+        world_dict['board_locations'] = board_locations
         world_dict['n_actions'] = 6
         world_dict['n_observations'] = n_observations 
         world_dict['adjacency'] = adj.tolist()
