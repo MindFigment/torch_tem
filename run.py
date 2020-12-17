@@ -17,7 +17,8 @@ import importlib.util
 import world
 import utils
 import parameters
-import model as model    
+import model as model
+from tqdm import tqdm
 
 # Set random seeds for reproducibility
 np.random.seed(0)
@@ -55,9 +56,6 @@ if load_existing_model:
     # Create a new tem model with the loaded parameters
     tem = model.Model(params).to(device)
 
-    for n, p in tem.named_parameters():
-        print(p.device, '', n)
-
     # Load the model weights after training
     model_weights = torch.load(model_path + '/tem_' + str(i_start) + '.pt')
     # Set the model weights to the loaded trained model weights
@@ -79,17 +77,17 @@ else:
     for file in files:
         if os.path.isfile(file):
             shutil.copy2(file, os.path.join(script_path, file))        
-            
+    
     # Initalise hyperparameters for model
-    params = parameters.parameters()
+    params = parameters.parameters(device)
     # Save parameters
     np.save(os.path.join(save_path, 'params'), params)       
     
     # And create instance of TEM with those parameters
     tem = model.Model(params).to(device)
 
-    for n, p in tem.named_parameters():
-        print(p.device, '', n)
+    # for n, p in tem.named_parameters():
+    #    print(p.device, '', n)
     
     # Create list of environments that we will sample from during training to provide TEM with trajectory input
     envs = ['./envs/first-experiment4x4.json']
@@ -115,6 +113,8 @@ walks = [env.generate_walks(params['n_rollout']*np.random.randint(params['walk_i
 prev_iter = None
 
 # Train TEM on walks in different environment
+bar = tqdm(total=params['train_it'])
+bar.update(i_start)
 for i in range(i_start, params['train_it']):
     
     # Get start time for function timing
@@ -159,13 +159,13 @@ for i in range(i_start, params['train_it']):
                     chunk[step][comp_i].append(comp)
     # Stack all observations (x, component 1) into tensors along the first dimension for batch processing
     for i_step, step in enumerate(chunk):
-        chunk[i_step][1] = torch.stack(step[1], dim=0)    
-        
+        chunk[i_step][1] = torch.stack(step[1], dim=0)
+
     # Forward-pass this walk through the network
-    forward = tem(chunk, prev_iter).cpu()
-    
+    forward = tem(chunk, prev_iter)
+
     # Accumulate loss from forward pass
-    loss = torch.tensor(0.0)
+    loss = torch.tensor(0.0, device=device)
     # Make vector for plotting losses
     plot_loss = 0
     # Collect all losses 
@@ -181,7 +181,7 @@ for i in range(i_start, params['train_it']):
         # Stack losses in this step along first dimension, then average across that dimension to get mean loss for this step
         step_loss = torch.tensor(0) if not step_loss else torch.mean(torch.stack(step_loss, dim=0), dim=0)
         # Save all separate components of loss for monitoring
-        plot_loss = plot_loss + step_loss.detach().numpy()
+        plot_loss = plot_loss + step_loss.detach().cpu().numpy()
         # And sum all components, then add them to total loss of this step
         loss = loss + torch.sum(step_loss)
 
@@ -197,17 +197,19 @@ for i in range(i_start, params['train_it']):
     # Compute model accuracies
     acc_p, acc_g, acc_gt = np.mean([[np.mean(a) for a in step.correct()] for step in forward], axis=0)
     acc_p, acc_g, acc_gt = [a * 100 for a in (acc_p, acc_g, acc_gt)]        
-    # Log progress 
+    # Log progress
+    if i % 100 == 0 and i != 0:
+        bar.update(100)
     if i % 10 == 0:
         # Write series of messages to logger from this backprop iteration
         logger.info('Finished backprop iter {:d} in {:.2f} seconds.'.format(i,time.time()-start_time))
-        logger.info('Loss: {:.2f}. <p_g> {:.2f} <p_x> {:.2f} <x_gen> {:.2f} <x_g> {:.2f} <x_p> {:.2f} <g> {:.2f} <reg_g> {:.2f} <reg_p> {:.2f}'.format(loss.detach().numpy(), *plot_loss))
+        logger.info('Loss: {:.2f}. <p_g> {:.2f} <p_x> {:.2f} <x_gen> {:.2f} <x_g> {:.2f} <x_p> {:.2f} <g> {:.2f} <reg_g> {:.2f} <reg_p> {:.2f}'.format(loss.detach().cpu().numpy(), *plot_loss))
         logger.info('Accuracy: <p> {:.2f}% <g> {:.2f}% <gt> {:.2f}%'.format(acc_p, acc_g, acc_gt))
-        logger.info('Parameters: <max_hebb> {:.2f} <eta> {:.2f} <lambda> {:.2f} <p2g_scale_offset> {:.2f}'.format(np.max(np.abs(prev_iter[0].M[0].numpy())), tem.hyper['eta'], tem.hyper['lambda'], tem.hyper['p2g_scale_offset']))
-        logger.info('Weights:' + str([w for w in loss_weights.numpy()]))
+        logger.info('Parameters: <max_hebb> {:.2f} <eta> {:.2f} <lambda> {:.2f} <p2g_scale_offset> {:.2f}'.format(np.max(np.abs(prev_iter[0].M[0].cpu().numpy())), tem.hyper['eta'], tem.hyper['lambda'], tem.hyper['p2g_scale_offset']))
+        logger.info('Weights:' + str([w for w in loss_weights.cpu().numpy()]))
         logger.info(' ')
         # Also write progress to tensorboard, and all loss components. Order: [L_p_g, L_p_x, L_x_gen, L_x_g, L_x_p, L_g, L_reg_g, L_reg_p]
-        writer.add_scalar('Losses/Total', loss.detach().numpy(), i)
+        writer.add_scalar('Losses/Total', loss.detach().cpu().numpy(), i)
         writer.add_scalar('Losses/p_g', plot_loss[0], i)
         writer.add_scalar('Losses/p_x', plot_loss[1], i)
         writer.add_scalar('Losses/x_gen', plot_loss[2], i)
