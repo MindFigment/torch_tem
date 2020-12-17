@@ -15,7 +15,7 @@ def parameters():
     params = {}
     # -- World parameters
     # Does this world include the standing still action?
-    params['has_static_action'] = False
+    params['has_static_action'] = True
     # Number of available actions, excluding the stand still action (since standing still has an action vector full of zeros, it won't add to the action vector dimension)
     params['n_actions'] = 5
     # Bias for explorative behaviour to pick the same action again, to encourage straight walks
@@ -116,7 +116,7 @@ def parameters():
     # Number of neurons of entorhinal abstract location g for each frequency
     params['n_g'] = [3 * g for g in params['n_g_subsampled']]
     # Neurons for sensory observation x
-    params['n_x'] = 49
+    params['n_x'] = 45
     # Neurons for compressed sensory experience x_c
     params['n_x_c'] = 10
     # Neurons for temporally filtered sensory experience x for each frequency
@@ -187,6 +187,7 @@ def parameters():
     # Table for converting one-hot to two-hot compressed representation 
     params['two_hot_table'] = [[0]*(params['n_x_c']-2) + [1]*2]
     # We need a compressed code for each possible observation, but it's impossible to have more compressed codes than "n_x_c choose 2"
+    print(int(comb(params['n_x_c'],2)), params['n_x'])
     for i in range(1, min(int(comb(params['n_x_c'],2)), params['n_x'])):
         # Copy previous code
         code = params['two_hot_table'][-1].copy()

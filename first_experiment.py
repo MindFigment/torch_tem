@@ -20,7 +20,7 @@ class FirstExperiment:
             world_dict = self._create_first_experiment(width, height, n_observations, sym2reward, stay_still)
         
             filename = ''.join(['first-experiment', str(height), 'x', str(width), '.json'])
-            full_path = os.path.join('torch_tem', 'envs', filename)
+            full_path = os.path.join('envs', filename)
             with open(full_path, 'w') as f:
                 json.dump(world_dict, f)
 
@@ -272,16 +272,16 @@ def main():
     env_params = dict()
 
     sym2reward = {
-        40: 45, # 'banana'
-        41: 46, # 'orange'
-        42: 47, # 'milk'
-        43: 48  # 'coke'
+        37: 41, # 'banana'
+        38: 42, # 'orange'
+        39: 43, # 'milk'
+        40: 44  # 'coke'
     }
     env_params['sym2reward'] = sym2reward
 
     env_params['width'] = 4
     env_params['height'] = 4
-    env_params['n_observations'] = 49
+    env_params['n_observations'] = 45
     env_params['world_type'] = 'first experiment'
     env_params['stay_still'] = False
 
