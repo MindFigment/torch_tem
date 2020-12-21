@@ -98,15 +98,18 @@ class World:
     def observations_randomise(self):
         # Run through every abstract location
         if self.first_experiment:
+            # Specifying the arrangement of sensory observartions on the board
+            observations = np.random.choice(self.n_observations - self.n_sym_reward, self.width * self.height, replace=False)
+            # Put symbols on the board by swaping it with random observations
+            sym_locations = np.random.choice(self.board_locations, self.n_sym, replace=False)
+            np.put(observations, ind=sym_locations, v=list(self.sym2reward.keys()))
+            for i in range(self.width * self.height):
+                # Pick random observation from any of the observations
+                self.locations[i]['observation'] = observations[i]
+        else:
             for location in self.locations:
-                # Specifying the arrangement of sensory observartions on the board
-                observations = np.random.choice(self.n_observations - self.n_sym_reward, self.width * self.height, replace=False)
-                # Put symbols on the board by swaping it with random observations
-                sym_locations = np.random.choice(self.board_locations, self.n_sym, replace=False)
-                np.put(observations, ind=sym_locations, v=list(self.sym2reward.keys()))
-        for location in self.locations:
-            # Pick random observation from any of the observations
-            location['observation'] = np.random.randint(self.n_observations)
+                # Pick random observation from any of the observations
+                location['observation'] = np.random.randint(self.n_observations)
         return self
     
     def policy_random(self):

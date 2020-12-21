@@ -36,11 +36,11 @@ def parameters(device):
       
     # -- Traning parameters
     # Number of walks to generate
-    params['train_it'] = 20000
+    params['train_it'] = 8000
     # Number of steps to roll out before backpropagation through time
     params['n_rollout'] = 20
     # Batch size: number of walks for training simultaneously
-    params['batch_size'] = 16    
+    params['batch_size'] = 32
     # Minimum length of a walk on one environment. Walk lengths are sampled uniformly from a window that shifts down until its lower limit is walk_it_min at the end of training
     params['walk_it_min'] = 25
     # Maximum length of a walk on one environment. Walk lengths are sampled uniformly from a window that starts with its upper limit at walk_it_max in the beginning of training, then shifts down
