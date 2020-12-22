@@ -9,11 +9,12 @@ import numpy as np
 import torch
 import pdb
 import copy
+from collections import defaultdict, OrderedDict
 
 # Track prediction accuracy over walk, and calculate fraction of locations visited and actions taken to assess performance
 def performance(forward, model, environments):
     # Keep track of whether model prediction were correct, as well as the fraction of nodes/edges visited, across environments
-    all_correct, all_location_frac, all_action_frac = [], [], []
+    all_correct, all_location_frac, all_action_frac, all_location_stats = [], [], [], []
     # Run through environments and monitor performance in each
     for env_i, env in enumerate(environments):
         # Keep track for each location whether it has been visited
@@ -36,16 +37,22 @@ def performance(forward, model, environments):
         location_frac = []
         # And an array that stores for each step the fraction of actions taken
         action_frac = []
+        # Keep detail performance statistics for every location
+        location_stats = defaultdict(lambda : {'actions': {0: np.array([0, 0]), 1: np.array([0, 0]), 2: np.array([0, 0]), 3:np.array([0, 0]), 4:np.array([0, 0]), 5:np.array([0, 0])}})
+        
         # Run through iterations of forward pass to check when an action is taken for the first time
         for step in forward:
             # Update the states that have now been visited
             location_visited[step.g[env_i]['id']] = True
+            # OK
+            location_stats[step.g[env_i]['id']]['actions'][step.a[env_i]] += np.array([int((torch.argmax(step.x_gen[2][env_i]) == torch.argmax(step.x[env_i])).numpy()), 1])
             # ... And the actions that now have been taken
             if model.hyper['has_static_action']:
                 if step.a[env_i] > 0:
                     action_taken[step.g[env_i]['id'], step.a[env_i] - 1] = True
             else:
-                action_taken[step.g[env_i]['id'], step.a[env_i]] = True                    
+                action_taken[step.g[env_i]['id'], step.a[env_i]] = True
+
             # Mark the location of the previous iteration as visited
             correct.append((torch.argmax(step.x_gen[2][env_i]) == torch.argmax(step.x[env_i])).numpy())
             # Add the fraction of locations visited for this step
@@ -56,8 +63,10 @@ def performance(forward, model, environments):
         all_correct.append(correct)
         all_location_frac.append(location_frac)
         all_action_frac.append(action_frac)
+        # sort dict by key
+        all_location_stats.append(OrderedDict(sorted(location_stats.items(), key=lambda t: t[0])))
     # Return 
-    return all_correct, all_location_frac, all_action_frac
+    return all_correct, all_location_frac, all_action_frac, all_location_stats
 
 # Track prediction accuracy per location, after a transition towards the location 
 def location_accuracy(forward, model, environments):

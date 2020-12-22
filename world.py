@@ -46,6 +46,7 @@ class World:
             self.width = env['width']
             self.height = env['height']
             self.sym2reward = env['sym2reward']
+            self.symbol_locations = env['symbol_locations']
             self.board_locations = env['board_locations']
             self.n_sym = env['n_symbols']
             self.n_sym_reward = 2 * self.n_sym
@@ -103,6 +104,7 @@ class World:
             # Put symbols on the board by swaping it with random observations
             sym_locations = np.random.choice(self.board_locations, self.n_sym, replace=False)
             np.put(observations, ind=sym_locations, v=list(self.sym2reward.keys()))
+            self.symbol_locations = sym_locations
             for i in range(self.width * self.height):
                 # Pick random observation from any of the observations
                 self.locations[i]['observation'] = observations[i]
