@@ -2,6 +2,8 @@ import json
 import numpy as np
 import random
 
+from my_utils import load_model
+
 
 # STAY_STILL = 'stay_still'
 # STAY_STILL_ID = 0
@@ -110,6 +112,8 @@ class Environment:
 def main():
     env = Environment()
     env.display_env()
+
+    model, _ = load_model()
 
     while True:
         try:

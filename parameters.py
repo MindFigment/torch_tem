@@ -11,7 +11,13 @@ import torch
 from scipy.special import comb
 
 # This contains one single function that generates a dictionary of parameters, which is provided to the model on initialisation
-def parameters(device):
+def parameters():
+
+    if torch.cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
+
     params = {}
     params['device'] = device
     # -- World parameters

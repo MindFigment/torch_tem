@@ -19,12 +19,12 @@ def performance(forward, model, environments):
         # Keep track for each location whether it has been visited
         location_visited = np.full(env.n_locations, False)
         # And for each action in each location whether it has been taken
-        action_taken = np.full((env.n_locations,model.hyper['n_actions']), False)
+        action_taken = np.full((env.n_locations, model.hyper['n_actions']), False)
         # Not all actions are available at every location (e.g. edges of grid world). Find how many actions can be taken
-        action_available = np.full((env.n_locations,model.hyper['n_actions']), False)
+        action_available = np.full((env.n_locations, model.hyper['n_actions']), False)
         for currLocation in env.locations:
             for currAction in currLocation['actions']:
-                if np.sum(currAction['transition']) > 0:
+                if currAction['probability'] > 0:
                     if model.hyper['has_static_action']:
                         if currAction['id'] > 0:
                             action_available[currLocation['id'], currAction['id'] - 1] = True
@@ -75,8 +75,10 @@ def location_accuracy(forward, model, environments):
             # Prediction on depature: sensory prediction after leaving given node - i.e. store whether the current prediction is correct for the previous location
             correct_from[forward[step_i].g[env_i]['id']].append((torch.argmax(step.x_gen[2][env_i]) == torch.argmax(step.x[env_i])).numpy().tolist())
         # Add performance and visitation fractions of this environment to performance list across environments
-        accuracy_from.append([sum(correct_from_location) / (len(correct_from_location) if len(correct_from_location) > 0 else 1) for correct_from_location in correct_from])
-        accuracy_to.append([sum(correct_to_location) / (len(correct_to_location) if len(correct_to_location) > 0 else 1) for correct_to_location in correct_to])
+        # print(correct_from)
+        # print(correct_to)
+        accuracy_from.append([sum(correct_from_location) / (len(correct_from_location) if len(correct_from_location) > 0 else -1) for correct_from_location in correct_from])
+        accuracy_to.append([sum(correct_to_location) / (len(correct_to_location) if len(correct_to_location) > 0 else -1) for correct_to_location in correct_to])
     # Return 
     return accuracy_from, accuracy_to
 

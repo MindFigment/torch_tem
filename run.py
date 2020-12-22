@@ -79,7 +79,7 @@ else:
             shutil.copy2(file, os.path.join(script_path, file))        
     
     # Initalise hyperparameters for model
-    params = parameters.parameters(device)
+    params = parameters.parameters()
     # Save parameters
     np.save(os.path.join(save_path, 'params'), params)       
     
@@ -103,8 +103,12 @@ logger = utils.make_logger(run_path)
 # Make an ADAM optimizer for TEM
 adam = torch.optim.Adam(tem.parameters(), lr = params['lr_max'])
 
+##################################################################################################
+### Shouldn't it be inside the training loop??? Making new set of environments for every epoch ###
+##################################################################################################
+
 # Make set of environments: one for each batch, randomly choosing to use shiny objects or not
-environments = [world.World(graph, randomise_observations=True, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None), first_experiment=True) for graph in np.random.choice(envs,params['batch_size'])]
+environments = [world.World(graph, randomise_observations=True, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None), first_experiment=False) for graph in np.random.choice(envs,params['batch_size'])]
 # Initialise whether a state has been visited for each world
 visited = [[False for _ in range(env.n_locations)] for env in environments]
 # And make a single walk for each environment, where walk lengths can be any between the min and max length to de-sychronise world switches

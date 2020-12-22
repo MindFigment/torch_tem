@@ -213,7 +213,7 @@ class Model(torch.nn.Module):
         # But for environments with shiny objects, the transition to the new abstract location shouldn't have access to the action direction in the generative model
         shiny_envs = [location['shiny'] is not None for location in locations]
         # If there are any shiny environments, the abstract locations for the generative model will need to be re-calculated without providing actions for those
-        g_gen =  self.f_mu_g_path(a_prev, g_prev, no_direc=shiny_envs) if any(shiny_envs) else g
+        g_gen = self.f_mu_g_path(a_prev, g_prev, no_direc=shiny_envs) if any(shiny_envs) else g
         # Return generated abstract location after transition
         return g_gen, (g, sigma_g)
     
@@ -464,7 +464,7 @@ class Model(torch.nn.Module):
         n_p = np.cumsum(np.concatenate(([0],self.hyper['n_p'])))                
         # Now re-cast the grounded location into different frequency modules, since memory retrieval turned it into one long vector
         p = [h_t[:,n_p[f]:n_p[f+1]] for f in range(self.hyper['n_f'])]
-        return p;
+        return p
     
     def hebbian(self, M_prev, p_inferred, p_generated, do_hierarchical_connections=True):
         # Create new ground memory for attractor network by setting weights to outer product of learned vectors
@@ -476,7 +476,7 @@ class Model(torch.nn.Module):
             M_new = M_new * self.hyper['p_update_mask']
         # Store grounded location in attractor network memory with weights M by Hebbian learning of pattern        
         M = torch.clamp(self.hyper['lambda'] * M_prev + self.hyper['eta'] * M_new, min=-1, max=1)
-        return M;
+        return M
 
 class MLP(torch.nn.Module):
     def __init__(self, in_dim, out_dim, activation=(torch.nn.functional.elu, None), hidden_dim=None, bias=(True, True), device='cpu'):
