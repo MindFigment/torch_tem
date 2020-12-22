@@ -208,8 +208,8 @@ def rate_map(forward, model, environments):
         for step in forward:
             # Run through frequency modules and append the firing rates to the correct location list
             for f in range(model.hyper['n_f']):
-                g[f][step.g[env_i]['id']].append(step.g_inf[f][env_i].numpy())
-                p[f][step.g[env_i]['id']].append(step.p_inf[f][env_i].numpy())
+                g[f][step.g[env_i]['id']].append(step.g_inf[f][env_i].cpu().numpy())
+                p[f][step.g[env_i]['id']].append(step.p_inf[f][env_i].cpu().numpy())
         # Now average across location visits to get a single represenation vector for each location for each frequency
         for cells, n_cells in zip([p, g], [model.hyper['n_p'], model.hyper['n_g']]):
             for f, frequency in enumerate(cells):

@@ -31,7 +31,9 @@ def test_performance():
     # Get start time for function timing
     start_time = time.time()
 
-    forwards = []
+    i = 0
+    all_g = np.zeros((20, 30))
+    all_p = np.zeros((20, 100))
     while all([len(walk) >= params['n_rollout'] for walk in walks]):
 
         # Make an empty chunk that will be fed to TEM in this backprop iteration
@@ -77,10 +79,12 @@ def test_performance():
 
         # Reset gradients
         adam.zero_grad()
-        # Do backward pass to calculate gradients with respect to total loss of this chunk
-        loss.backward(retain_graph=True)
-        # Then do optimiser step to update parameters of model
-        adam.step()
+
+        if i < 10:
+            # Do backward pass to calculate gradients with respect to total loss of this chunk
+            loss.backward(retain_graph=True)
+            # Then do optimiser step to update parameters of model
+            adam.step()
         # Update the previous iteration for the next chunk with the final step of this chunk, removing all operation history
         prev_iter = [forward[-1].detach()]
         
@@ -112,23 +116,28 @@ def test_performance():
         # print('All location stats')
         # print(all_locations_stats)
 
-        forwards += forward
-
-    all_g, all_p = rate_map([step.detach() for step in forwards[5:]], tem, environments)
-
-    # pprint(all_g[0][0][:, 0])
+        all_g_tmp, all_p_tmp = rate_map([step.detach() for step in forward], tem, environments)
+        all_g += all_g_tmp[0][0]
+        all_p += all_p_tmp[0][0]
+        i += 1
 
     import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
 
     fig, axs = plt.subplots(nrows=5, ncols=6, figsize=(9, 6),
                         subplot_kw={'xticks': [], 'yticks': []})
 
-    print(all_g[0][0].shape)
-    print(all_p[0][0].shape)
+    print(environments[0].symbol_locations)
 
     for ax, g in zip(axs.flat, list(range(30))):
-        ax.imshow(all_g[0][0][:, g].reshape(4, 5), interpolation='hanning', cmap='hot')
+        ax.imshow(all_g[:, g].reshape(5, 4) / i, interpolation='hanning', cmap='Blues')
         ax.set_title(str(g))
+
+        colors = ['brown', 'green', 'pink', 'yellow']
+        for j, sym_loc in enumerate(environments[0].symbol_locations):
+            # add rectangle to plot
+            ax.add_patch(Rectangle((sym_loc // 4, sym_loc % 5), -1, -1, edgecolor=colors[j], facecolor='blue', fill=False, lw=1))
+            ax.add_patch(Rectangle((4, j), 1, 1, edgecolor=colors[j], facecolor='blue', fill=False, lw=1))
 
     plt.tight_layout()
     plt.show()

@@ -90,7 +90,8 @@ else:
     #    print(p.device, '', n)
     
     # Create list of environments that we will sample from during training to provide TEM with trajectory input
-    envs = ['./envs/first-experiment4x4.json']
+    envs = ['./envs/4x4.json'] # './envs/first-experiment.json'
+    first_experiment = False
     # Save all environment files that are being used in training in the script directory
     for file in set(envs):
         shutil.copy2(file, os.path.join(envs_path, os.path.basename(file)))    
@@ -108,7 +109,7 @@ adam = torch.optim.Adam(tem.parameters(), lr = params['lr_max'])
 ##################################################################################################
 
 # Make set of environments: one for each batch, randomly choosing to use shiny objects or not
-environments = [world.World(graph, randomise_observations=True, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None), first_experiment=False) for graph in np.random.choice(envs,params['batch_size'])]
+environments = [world.World(graph, randomise_observations=True, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None), first_experiment=first_experiment) for graph in np.random.choice(envs,params['batch_size'])]
 # Initialise whether a state has been visited for each world
 visited = [[False for _ in range(env.n_locations)] for env in environments]
 # And make a single walk for each environment, where walk lengths can be any between the min and max length to de-sychronise world switches
@@ -141,7 +142,7 @@ for i in range(i_start, params['train_it']):
         # Make sure this walk has enough steps in it for a whole backprop iteration
         if len(walk) < params['n_rollout']:
             # If it doesn't: create a new environment 
-            environments[env_i] = world.World(envs[np.random.randint(len(envs))], randomise_observations=True, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None))
+            environments[env_i] = world.World(envs[np.random.randint(len(envs))], randomise_observations=True, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None), first_experiment=first_experiment)
             # Initialise whether a state has been visited for each world
             visited[env_i] = [False for _ in range(environments[env_i].n_locations)]            
             # Generate a new walk on that environment
