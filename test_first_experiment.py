@@ -1,155 +1,144 @@
-import json
 import numpy as np
-import random
+import torch
+from pprint import pprint
+import time
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+import click
+from datetime import datetime
+import glob
+import copy
 
+import analyse
 from my_utils import load_model
+import world
+import plot
+from my_plot import plot_rate_maps
 
 
-# STAY_STILL = 'stay_still'
-# STAY_STILL_ID = 0
-# UP = 'up'
-# UP_ID = 1
-# DOWN = 'down'
-# DOWN_ID = 3
-# RIGHT = 'right'
-# RIGHT_ID = 2
-# LEFT = 'left'
-# LEFT_ID = 4
-# PRESS = 'press'
-# PRESS_ID = 5
+# @click.command()
+# @click.option('--load', default=False, type=bool)
+# @click.option('--date', default=datetime.today().strftime('%Y-%m-%d'), type=str)
+# @click.option('--run', default='0', type=str)
+# @click.argument('envs', nargs=-1)
+def test_first_experiment():
 
+    date = '2020-12-17'
+    run = '0'
+    envs = ['first-experiment4x4']
 
-class Environment:
-    '''
-    '''
+    tem, params, _, _ = load_model(date, run, envs)
+    tem.eval()
 
-    def __init__(self, env='./torch_tem/envs/first-experiment4x4.json', seed=None):
-        '''
-        Initiates environment
-        '''
+    # Make list of all the environments that this model was trained on
+    envs = ['./envs/' + env + '.json' for env in envs]
+    # Set the number of walks to execute in parallel (batch size)
+    n_walks = len(envs)
+    # Select environments from the environments included in training
+    environments = [world.World(graph, randomise_observations=True, shiny=None) for env_i, graph in enumerate(np.random.choice(envs, n_walks))]
+    # Determine the length of each walk
+    walk_len = np.median([env.n_locations * 5 for env in environments]).astype(int)
+    # And generate walks for each environment
+    walks = [env.generate_walks(walk_len, 1)[0] for env in environments]
 
-        file = open(env, 'r') 
-        json_text = file.read()
-        self.env = json.loads(json_text)
-        file.close()
+    # print(walks)
+    # print(walks[0][0])
 
-        self.PRESS = 'press'
-        self.UP = 'up'
-        self.DOWN = 'down'
-        self.LEFT = 'left'
-        self.RIGHT = 'right'
+    # for i, env in enumerate(environments):
+    #     print(f'Env{i + 1} symbol locations: {env.symbol_locations}')
 
-        self.action2id = {
-            self.UP: 1,
-            self.DOWN: 3,
-            self.LEFT: 4,
-            self.RIGHT: 2,
-            self.PRESS: 5
-        }
+    # Generate model input from specified walk and environment: group steps from all environments together to feed to model in parallel
+    model_input = [[[[walks[i][j][k]][0] for i in range(len(walks))] for k in range(3)] for j in range(walk_len)]
+    for i_step, step in enumerate(model_input):
+        model_input[i_step][1] = torch.stack(step[1], dim=0)
 
-        self.actions = [self.UP, self.DOWN, self.LEFT, self.RIGHT, self.PRESS]
+    # print(len(model_input), len(model_input[0]), model_input[0])
 
-        self.width = self.env['width']
-        self.height = self.env['height']
+    # Run a forward pass through the model using this data, without accumulating gradients
+    with torch.no_grad():
+        forward = tem(model_input, prev_iter=None)
 
-        self.grid = np.zeros(self.height * self.width)
-        self.sym_loc = self.env['symbol_locations']
-        self.rew_loc = self.env['reward_locations']
-        self.n_sym = self.env['n_symbols']
-        self.n_loc = self.env['n_locations']
-        self.n_observations = self.env['n_observations']
-        self.n_board = self.n_loc - self.n_sym
-        self.symloc2rewloc = dict(zip(self.sym_loc, self.rew_loc))
-        self.rewloc2symloc = dict(zip(self.rew_loc, self.sym_loc))
+    # print(forward)
 
-        for location in self.env['locations']:
-            if location['id'] not in self.rew_loc:
-                self.grid[location['id']] = location['observation']
+    # # Decide whether to include stay-still actions as valid occasions for inference
+    # include_stay_still = False
+    # # Choose which environment to plot
+    env_to_plot = 0
+    # Choose which grid or place cell module to plot
+    module_to_plot = 0
+    # # And when averaging environments, e.g. for calculating average accuracy, decide which environments to include
+    # envs_to_avg = [True]
 
-        self._init_agent_position()
+    # # Compare trained model performance to a node agent and an edge agent
+    # correct_model, correct_node, correct_edge = analyse.compare_to_agents(forward, tem, environments, include_stay_still=include_stay_still)
+    # print('Correct model: {:.4f} ({}/{})'.format(np.mean(correct_model[0]), np.sum(correct_model[0]), len(correct_model[0])))
+    # print('Correct model: {:.4f} ({}/{})'.format(np.mean(correct_node[0]), np.sum(correct_node[0]), len(correct_node[0])))
+    # print('Correct model: {:.4f} ({}/{})'.format(np.mean(correct_edge[0]), np.sum(correct_edge[0]), len(correct_edge[0])))
 
+    # # Analyse occurrences of zero-shot inference: predict the right observation arriving from a visited node with a new action
+    # zero_shot = analyse.zero_shot(forward, tem, environments, include_stay_still=include_stay_still)
+    # print('Zero shot: {:.4f}'.format(np.sum(zero_shot[0]) / len(zero_shot[0])))
 
-    def step(self, action):
-        transition = self.env['locations'][self.curr_loc]['actions'][self.action2id[action]]['transition']
-        if np.sum(transition) > 0:
-            self.curr_loc = np.nonzero(np.array(transition))[0][0]
+    # Generate occupancy maps: how much time TEM spends at every location
+    occupation = analyse.location_occupation(forward, tem, environments)
+    print('Occupation percent: ' + 
+          ', '.join('{:.2f}%'.format(occ) for occ in occupation[env_to_plot] / np.sum(occupation[env_to_plot]) * 100) +
+          ' (1% = {:.2f} visits)'.format(np.sum(occupation[env_to_plot])/ 100))
 
+    # Generate rate maps
+    g, p = analyse.rate_map(forward, tem, environments)
 
-    def _init_agent_position(self):
-        self.curr_loc = np.random.randint(self.height * self.width)
+    print(len(g), len(g[env_to_plot]), g[env_to_plot][module_to_plot].shape)
+    print(len(p), len(p[env_to_plot]), p[env_to_plot][module_to_plot].shape)
 
-    
-    def get_token(self, i):
-        token = None
-        if i in self.sym_loc:
-            token = int(self.grid[i])
-        else:
-            # token = 'x'
-            token = int(self.grid[i])
-        return token
+    #################
+    #################
+    #################
 
+    plot_rate_maps(g[env_to_plot][module_to_plot], 
+                   environments[env_to_plot].symbol_locations,
+                   environments[env_to_plot].height + 1,
+                   environments[env_to_plot].width)
 
-    def display_env(self):
-        on_reward_loc = False
-        if self.curr_loc >= self.n_board:
-            self.grid[self.rewloc2symloc[self.curr_loc]] = self.env['locations'][self.curr_loc]['observation']
-            on_reward_loc = True
-        for i in range(self.n_board):
-            token = self.get_token(i)
-            if self.curr_loc == i:
-                print('({:2})'.format(token), end='')
-            elif on_reward_loc and self.rewloc2symloc[self.curr_loc] == i:
-                print('[{:2}]'.format(token), end='')
-            else:
-                print('|{:2}|'.format(token), end='')
-            
-            if np.mod(i + 1, self.width) == 0:
-                print()
-        if on_reward_loc:
-            self.grid[self.rewloc2symloc[self.curr_loc]] = self.env['locations'][self.rewloc2symloc[self.curr_loc]]['observation']
+    #################
+    #################
+    #################
 
+    # Calculate accuracy leaving from and arriving to each location
+    from_acc, to_acc = analyse.location_accuracy(forward, tem, environments)
 
-def main():
-    env = Environment()
-    env.display_env()
+    print('From acc: ' + ', '.join('{:.2f}%'.format(acc * 100) for acc in from_acc[env_to_plot]))
+    print('To acc  : ' + ', '.join('{:.2f}%'.format(acc * 100) for acc in to_acc[env_to_plot]))
 
-    model, _ = load_model()
+    # # Plot results of agent comparison and zero-shot inference analysis
+    # filt_size = 41
+    # plt.figure()
+    # plt.plot(analyse.smooth(np.mean(np.array([env for env_i, env in enumerate(correct_model) if envs_to_avg[env_i]]),0)[1:], filt_size), label='tem')
+    # plt.plot(analyse.smooth(np.mean(np.array([env for env_i, env in enumerate(correct_node) if envs_to_avg[env_i]]),0)[1:], filt_size), label='node')
+    # plt.plot(analyse.smooth(np.mean(np.array([env for env_i, env in enumerate(correct_edge) if envs_to_avg[env_i]]),0)[1:], filt_size), label='edge')
+    # plt.ylim(0, 1.05)
+    # plt.legend()
+    # plt.title('Zero-shot inference: ' + str(np.mean([np.mean(env) for env_i, env in enumerate(zero_shot) if envs_to_avg[env_i]]) * 100) + '%')
+    # plt.show()
 
-    while True:
-        try:
-            command = input('Next action: ')
-            if command == '\x1b[A':
-                # print('arrow up')
-                action = env.UP
-            elif command == '\x1b[B':
-                # print('arrow down')
-                action = env.DOWN
-            elif command == '\x1b[D':
-                # print('arrow left')
-                action = env.LEFT
-            elif command == '\x1b[C':
-                # print('arrow right')
-                action = env.RIGHT
-            elif command == 'b':
-                # print('Button pressed')
-                action = env.PRESS
-            elif command == '\x1b' or command == 'e':
-                break
-            else:
-                print('.')
-            
-            env.step(action)
-            env.display_env()
-            
-        except ValueError:
-            print('Ups, something went wrong')
-            continue
+    # Plot accuracy separated by location
+    plt.figure()
+    ax = plt.subplot(1,2,1)
+    plot.plot_map(environments[env_to_plot], np.array(to_acc[env_to_plot]), ax)
+    ax.set_title('Accuracy to location')
+    ax = plt.subplot(1,2,2)
+    plot.plot_map(environments[env_to_plot], np.array(from_acc[env_to_plot]), ax)
+    ax.set_title('Accuracy from location')
 
+    # # Plot occupation per location, then add walks on top
+    # ax = plot.plot_map(environments[env_to_plot], np.array(occupation[env_to_plot])/sum(occupation[env_to_plot])*environments[env_to_plot].n_locations, 
+    #                 min_val=0, max_val=2, ax=None, shape='square', radius=1/np.sqrt(environments[env_to_plot].n_locations))
+    # ax = plot.plot_walk(environments[env_to_plot], walks[env_to_plot], ax=ax, n_steps=max(1, int(len(walks[env_to_plot])/500)))
+    # plt.title('Walk and average occupation')
 
 
 if __name__ == '__main__':
-    main()
-
+    test_first_experiment()
 
 
 

@@ -13,10 +13,7 @@ from scipy.special import comb
 # This contains one single function that generates a dictionary of parameters, which is provided to the model on initialisation
 def parameters():
 
-    if torch.cuda.is_available():
-        device = 'cuda'
-    else:
-        device = 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     params = {}
     params['device'] = device
@@ -42,7 +39,7 @@ def parameters():
       
     # -- Traning parameters
     # Number of walks to generate
-    params['train_it'] = 8000
+    params['train_it'] = 2000
     # Number of steps to roll out before backpropagation through time
     params['n_rollout'] = 20
     # Batch size: number of walks for training simultaneously
@@ -106,7 +103,7 @@ def parameters():
     
     # ---- Neuron and module parameters
     # Neurons for subsampled entorhinal abstract location f_g(g) for each frequency module
-    params['n_g_subsampled'] = [10, 10, 8, 6, 6] 
+    params['n_g_subsampled'] =  [12, 12, 10, 8, 8] # [10, 10, 8, 6, 6] 
     # Neurons for object vector cells. Neurons will get new modules if object vector cell modules are separated; otherwise, they are added to existing abstract location modules.
     # a) No additional modules, no additional object vector neurons (e.g. when not using shiny environments): [0 for _ in range(len(params['n_g_subsampled']))], and separate_ovc set to False
     # b) No additional modules, but n additional object vector neurons in each grid module: [n for _ in range(len(params['n_g_subsampled']))], and separate_ovc set to False
@@ -125,7 +122,7 @@ def parameters():
     # Neurons for sensory observation x
     params['n_x'] = 45
     # Neurons for compressed sensory experience x_c
-    params['n_x_c'] = 10
+    params['n_x_c'] = 12 # 10
     # Neurons for temporally filtered sensory experience x for each frequency
     params['n_x_f'] = [params['n_x_c'] for _ in range(params['n_f'])]
     # Neurons for hippocampal grounded location p for each frequency

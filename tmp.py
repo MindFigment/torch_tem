@@ -1,19 +1,7 @@
-import numpy as np
-import torch
-from pprint import pprint
-import time
-
-from analyse import performance, location_accuracy, rate_map
-from my_utils import load_model
-import world
-
-
-def test_performance():
-    tem, params, envs = load_model()
+tem, params, envs, i_start = load_model(date, run, envs)
+    tem.eval()
 
     params['n_rollout'] = 100
-
-    adam = torch.optim.Adam(tem.parameters(), lr = params['lr_max'])
 
     # Make set of environments: one for each batch, randomly choosing to use shiny objects or not
     environments = [world.World(graph, randomise_observations=True, shiny=None, first_experiment=True) for graph in envs]
@@ -24,7 +12,7 @@ def test_performance():
     # Initialise the previous iteration as None: we start from the beginning of the walk, so there is no previous iteration yet
     prev_iter = None
 
-    # print(walks)
+    print(walks[0][-100:])
 
     loss_weights = params['loss_weights']
 
@@ -103,6 +91,14 @@ def test_performance():
 
         # accuracy_from, accuracy_to = location_accuracy(forward, tem, environments)
 
+        occupation = location_occupation(forward, tem, environments)
+        print('Occupation')
+        print(occupation)
+
+        zero = zero_shot(forward, tem, environments)
+        print('Zero shot')
+        print(zero)
+
         # print('All correct')
         # print(all_correct)
         # print('All location fraction')
@@ -121,9 +117,6 @@ def test_performance():
         all_p += all_p_tmp[0][0]
         i += 1
 
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Rectangle
-
     fig, axs = plt.subplots(nrows=5, ncols=6, figsize=(9, 6),
                         subplot_kw={'xticks': [], 'yticks': []})
 
@@ -141,16 +134,3 @@ def test_performance():
 
     plt.tight_layout()
     plt.show()
-
-
-def main():
-    test_performance()
-
-
-
-if __name__ == "__main__":
-    main()
-
-
-
-

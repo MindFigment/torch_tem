@@ -229,7 +229,7 @@ def action_patch(location_from, location_to, radius, colour):
     # Set patch coordinates                    
     if location_to['id'] == location_from['id']:
         # If this is a transition to self: action will point down (y-axis is reversed so pi/2 degrees is up)
-        a_dir = np.pi/2;
+        a_dir = np.pi/2
         # Set the patch coordinates to point from this location to transition location (but shifted upward for self transition)
         xdat = location_from['x'] + radius * np.array([2*np.cos((a_dir-np.pi/6)), 2*np.cos((a_dir+np.pi/6)), 3*np.cos((a_dir))])
         ydat = location_from['y'] - radius * 3 + radius * np.array([2*np.sin((a_dir-np.pi/6)), 2*np.sin((a_dir+np.pi/6)), 3*np.sin((a_dir))]) 
@@ -237,7 +237,7 @@ def action_patch(location_from, location_to, radius, colour):
         # This is not a transition to self. Find out the direction between current location and transitioned location
         xvec = location_to['x']-location_from['x']
         yvec = location_from['y']-location_to['y']
-        a_dir = np.arctan2(xvec*0-yvec*1,xvec*1+yvec*0);
+        a_dir = np.arctan2(xvec*0-yvec*1,xvec*1+yvec*0)
         # Set the patch coordinates to point from this location to transition location
         xdat = location_from['x'] + radius * np.array([2*np.cos((a_dir-np.pi/6)), 2*np.cos((a_dir+np.pi/6)), 3*np.cos((a_dir))])
         ydat = location_from['y'] + radius * np.array([2*np.sin((a_dir-np.pi/6)), 2*np.sin((a_dir+np.pi/6)), 3*np.sin((a_dir))])

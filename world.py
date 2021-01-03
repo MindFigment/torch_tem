@@ -11,10 +11,12 @@ import torch
 import copy
 from scipy.sparse.csgraph import shortest_path
 
+from first_experiment_graph import create_first_experiment_graph
+
 # Functions for generating data that TEM trains on: sequences of [state,observation,action] tuples
 
-class World:
-    def __init__(self, env, randomise_observations=False, randomise_policy=False, shiny=None, first_experiment=True):
+class World():
+    def __init__(self, env, randomise_observations=False, randomise_policy=False, shiny=None, option=1):
         # If the environment is provided as a filename: load the corresponding file. If it's no filename, it's assumed to be an environment dictionary
         if type(env) == str or type(env) == np.str_:
             # Filename provided, load graph from json file
@@ -41,15 +43,34 @@ class World:
             self.n_locations = 0
             self.n_observations = 0
         
-        self.first_experiment = first_experiment
-        if self.first_experiment:
+        #####################
+        ### My code start ###
+        #####################
+        try:
+            self.env_name = env['env_name']
+        except:
+            self.env_name = 'grid'
+        if self.env_name == 'first experiment':
             self.width = env['width']
             self.height = env['height']
+            self.stay_still = env['stay_still']
             self.sym2reward = env['sym2reward']
             self.symbol_locations = env['symbol_locations']
+            self.reward_locations = env['reward_locations']
             self.board_locations = env['board_locations']
             self.n_sym = env['n_symbols']
             self.n_sym_reward = 2 * self.n_sym
+            self.option = option
+            # If option == 2, then we need to be able to distinguish between when pressing button with symbol or regular one
+            if self.option == 2:
+                self.symbol2action = dict(zip(self.symbol_locations, self.n_sym * [self.n_actions + 1]))
+            # If option == 3, then we need to be able to distinguish between all symbols
+            elif self.option == 3:
+                self.symbol2action = dict(zip(self.symbol_locations, range(self.n_actions + 1, self.n_actions + 1 + self.n_sym)))
+        #####################
+        #### My code end ####
+        #####################
+        
         # If requested: shuffle observations from original assignments
         if randomise_observations:
             self.observations_randomise()
@@ -80,7 +101,7 @@ class World:
                 too_close = [dist_matrix[new,existing] < np.max(dist_matrix) / self.shiny['n'] for existing in self.shiny['locations']]
                 if not any(too_close):
                     self.shiny['locations'].append(new)                    
-            # Set those locaitons to be shiny
+            # Set those locations to be shiny
             for shiny_location in self.shiny['locations']:
                 self.locations[shiny_location]['shiny'] = True
             # Get objects at shiny locations
@@ -96,24 +117,29 @@ class World:
             # Generate a policy towards each of the shiny objects
             self.shiny['policies'] = [self.policy_distance(shiny_location) for shiny_location in self.shiny['locations']]
     
+
     def observations_randomise(self):
+        #####################
+        ### My code start ###
+        #####################
+        # If env is first experiment then we need to change a few things when randomising it, changing only observations
+        # ids at all locations will not be enough, mainly because we need to take care of symbols
+        if self.env_name == 'first experiment':
+            env_dict = create_first_experiment_graph(self.env_name, self.width, self.height, self.n_observations, self.sym2reward, self.stay_still)
+            self.adjacency = env_dict['adjacency']
+            self.locations = env_dict['locations']
+            self.symbol_locations = env_dict['symbol_locations']
+        #####################
+        #### My code end ####
+        #####################
         # Run through every abstract location
-        if self.first_experiment:
-            # Specifying the arrangement of sensory observartions on the board
-            observations = np.random.choice(self.n_observations - self.n_sym_reward, self.width * self.height, replace=False)
-            # Put symbols on the board by swaping it with random observations
-            sym_locations = np.random.choice(self.board_locations, self.n_sym, replace=False)
-            np.put(observations, ind=sym_locations, v=list(self.sym2reward.keys()))
-            self.symbol_locations = sym_locations
-            for i in range(self.width * self.height):
-                # Pick random observation from any of the observations
-                self.locations[i]['observation'] = observations[i]
         else:
             for location in self.locations:
                 # Pick random observation from any of the observations
                 location['observation'] = np.random.randint(self.n_observations)
         return self
     
+
     def policy_random(self):
         # Run through every abstract location
         for location in self.locations:
@@ -125,6 +151,7 @@ class World:
                 action['probability'] = 1.0/count if sum(action['transition']) > 0 else 0
         return self
     
+
     def policy_learned(self, reward_locations):
         # This generates a Q-learned policy towards reward locations.
         # Prepare new set of locations to hold policies towards reward locations
@@ -136,7 +163,7 @@ class World:
         # Do value iteration in order to find a policy toward a given location
         iters = 10*self.n_locations
         # Run value iterations by looping through all actions iteratively
-        for i in range(iters):
+        for _ in range(iters):
             # Deepcopy the current Q-values so they are the same for all updates (don't update values that you later need)
             prev_locations = copy.deepcopy(new_locations)
             for location in new_locations:
@@ -151,6 +178,7 @@ class World:
                 action['probability'] = probability
         # Return new locations with updated policy for given reward locations
         return new_locations
+
 
     def policy_distance(self, reward_locations):
         # This generates a distance-based policy towards reward locations, which is much faster than Q-learning but ignores policy and transition probabilities
@@ -174,10 +202,11 @@ class World:
         # Return new locations with updated policy for given reward locations
         return new_locations
         
+
     def generate_walks(self, walk_length=10, n_walk=100, repeat_bias_factor=2):
         # Generate walk by sampling actions accoring to policy, then next state according to graph
         walks = [] # This is going to contain a list of (state, observation, action) tuples
-        for currWalk in range(n_walk):
+        for _ in range(n_walk):
             new_walk = []
             # If shiny hasn't been specified: there are no shiny objects, generate default policy
             if self.shiny is None:
@@ -192,9 +221,10 @@ class World:
             walks.append(new_walk)   
         return walks
 
+
     def walk_default(self, walk, walk_length, repeat_bias_factor=2):
         # Finish the provided walk until it contains walk_length steps
-        for curr_step in range(walk_length - len(walk)):
+        for _ in range(walk_length - len(walk)):
             # Get new location based on previous action and location
             new_location = self.get_location(walk)
             # Get new observation at new location
@@ -206,13 +236,14 @@ class World:
         # Return the final walk
         return walk
     
+
     def walk_shiny(self, walk, walk_length, repeat_bias_factor=2):
         # Pick current shiny object to approach
         shiny_current = np.random.randint(self.shiny['n'])
         # Reset number of iterations to hang around an object once found
         shiny_returns = self.shiny['returns']
         # Finish the provided walk until it contains walk_length steps
-        for curr_step in range(walk_length - len(walk)):
+        for _ in range(walk_length - len(walk)):
             # Get new location based on previous action and location
             new_location = self.get_location(walk)
             # Check if the shiny object was found in this step
@@ -234,16 +265,35 @@ class World:
         # Return the final walk
         return walk
     
+
     def get_location(self, walk):
         # First step: start at random location
         if len(walk) == 0:
-            new_location = np.random.randint(self.n_locations)
+            if self.env_name == 'first experiment':
+                new_location = np.random.randint(self.board_locations)
+            else:
+                new_location = np.random.randint(self.n_locations)
         # Any other step: get new location from previous location and action
-        else:                        
-            new_location = int(np.flatnonzero(np.cumsum(walk[-1][0]['actions'][walk[-1][2]]['transition'])>np.random.rand())[0])
+        else:
+            #####################
+            ### My code start ###
+            #####################
+            # Action 5 means we are pressing button
+            # If last action is greater then number of symbols then it means we are in option 2 or 3 and 
+            # need to change action id back to 5 to get proper transition
+            last_action = walk[-1][2]
+            if last_action > self.n_sym:
+                probe_action = 5
+            # Return the new action                        
+            new_location = int(np.flatnonzero(walk[-1][0]['actions'][probe_action]['transition'])) 
+            #####################
+            #### My code end ####
+            #####################
+            # int(np.flatnonzero(np.cumsum(walk[-1][0]['actions'][walk[-1][2]]['transition']) > np.random.rand())[0])
         # Return the location dictionary of the new location
         return self.locations[new_location]
     
+
     def get_observation(self, new_location):
         # Find sensory observation for new state, and store it as one-hot vector
         new_observation = np.eye(self.n_observations)[new_location['observation']]
@@ -252,18 +302,30 @@ class World:
         # Return the new observation
         return new_observation
         
+
     def get_action(self, new_location, walk, repeat_bias_factor=2):
         # Build policy from action probability of each action of provided location dictionary
-        policy = np.array([action['probability'] for action in new_location['actions']])        
+        policy = np.array([action['probability'] for action in new_location['actions']])
         # Add a bias for repeating previous action to walk in straight lines, only if (this is not the first step) and (the previous action was a move)
         policy[[] if len(walk) == 0 or new_location['id'] == walk[-1][0]['id'] else walk[-1][2]] *= repeat_bias_factor
         # And renormalise policy (note that for unavailable actions, the policy was 0 and remains 0, so in that case no renormalisation needed)
         policy = policy / sum(policy) if sum(policy) > 0 else policy
         # Select action in new state
         new_action = int(np.flatnonzero(np.cumsum(policy)>np.random.rand())[0])
+        #####################
+        ### My code start ###
+        #####################
+        # Action 5 means we are pressing button
+        if new_action == 5 and self.env_name == 'first experiment' and new_location in self.symbol_locations:
+            if self.option == 2 or self.option == 3:
+                new_action = self.symbol2action[new_action]
+        #####################
+        #### My code end ####
+        #####################
         # Return the new action
         return new_action
     
+
     def get_reward(self, reward_locations):
         # Stick reward location into a list if there is only one reward location. Use multiple reward locations simultaneously for e.g. wall attraction
         reward_locations = [reward_locations] if type(reward_locations) is not list else reward_locations
