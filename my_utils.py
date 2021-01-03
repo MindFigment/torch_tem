@@ -34,7 +34,8 @@ def load_model(date, run, i_start, option, envs):
     params = torch.load(model_path + '/params_' + str(i_start) + '_option' + str(option) + '.pt', map_location=torch.device(device))
     # But certain parameters (like total nr of training iterations) may need to be copied from the current set of parameters
     new_params = {
-        'device':  device
+        'device':  device,
+        'train_it': 10000
     }
     # Update those in params
     for key in new_params:

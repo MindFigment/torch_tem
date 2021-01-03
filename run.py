@@ -44,7 +44,7 @@ def run(load, date, run, option, envs):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if load:
-        tem, params, envs, i_start = load_model(date, run, envs)
+        tem, params, envs, i_start = load_model(date, run, 3999, option, envs)
         run_path, train_path, model_path, save_path, script_path, envs_path = utils.set_directories(date, run)
     # Either load a trained model and continue training, or start afresh
     # if load:
