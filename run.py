@@ -105,11 +105,11 @@ def run(load, date, run, option, envs):
         # If option is 3 we too to add actions for each symbol (4)
         params['option'] = option
         if option == 2:
-            params['basic_n_action'] = params['n_actions']
-            params['n_actions'] = params['n_actions'] + 1
+            params['basic_n_actions'] = params['n_actions']
+            params['n_actions'] = params['n_actions'] + 1 + 1
         elif option == 3:
-            params['basic_n_action'] = params['n_actions']
-            params['n_actions'] = params['n_actions'] + 4
+            params['basic_n_actions'] = params['n_actions']
+            params['n_actions'] = params['n_actions'] + 4 + 1
         #####################
         #### My code end ####
         #####################
@@ -145,6 +145,8 @@ def run(load, date, run, option, envs):
     # Initialise the previous iteration as None: we start from the beginning of the walk, so there is no previous iteration yet
     prev_iter = None
 
+    # print(walks[1][100:])
+
     # Train TEM on walks in different environment
     bar = tqdm(total=params['train_it'])
     bar.update(i_start)
@@ -170,7 +172,7 @@ def run(load, date, run, option, envs):
             # Make sure this walk has enough steps in it for a whole backprop iteration
             if len(walk) < params['n_rollout']:
                 # If it doesn't: create a new environment 
-                environments[env_i] = world.World(envs[np.random.randint(len(envs))], randomise_observations=True, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None))
+                environments[env_i] = world.World(envs[np.random.randint(len(envs))], randomise_observations=True, option=option, shiny=(params['shiny'] if np.random.rand() < params['shiny_rate'] else None))
                 # Initialise whether a state has been visited for each world
                 visited[env_i] = [False for _ in range(environments[env_i].n_locations)]            
                 # Generate a new walk on that environment

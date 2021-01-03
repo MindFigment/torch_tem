@@ -39,11 +39,11 @@ def parameters():
       
     # -- Traning parameters
     # Number of walks to generate
-    params['train_it'] = 2000
+    params['train_it'] = 4000
     # Number of steps to roll out before backpropagation through time
     params['n_rollout'] = 20
     # Batch size: number of walks for training simultaneously
-    params['batch_size'] = 32
+    params['batch_size'] = 16
     # Minimum length of a walk on one environment. Walk lengths are sampled uniformly from a window that shifts down until its lower limit is walk_it_min at the end of training
     params['walk_it_min'] = 25
     # Maximum length of a walk on one environment. Walk lengths are sampled uniformly from a window that starts with its upper limit at walk_it_max in the beginning of training, then shifts down
@@ -122,7 +122,7 @@ def parameters():
     # Neurons for sensory observation x
     params['n_x'] = 45
     # Neurons for compressed sensory experience x_c
-    params['n_x_c'] = 12 # 10
+    params['n_x_c'] = 10
     # Neurons for temporally filtered sensory experience x for each frequency
     params['n_x_f'] = [params['n_x_c'] for _ in range(params['n_f'])]
     # Neurons for hippocampal grounded location p for each frequency

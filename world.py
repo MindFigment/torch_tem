@@ -67,6 +67,7 @@ class World():
             # If option == 3, then we need to be able to distinguish between all symbols
             elif self.option == 3:
                 self.symbol2action = dict(zip(self.symbol_locations, range(self.n_actions + 1, self.n_actions + 1 + self.n_sym)))
+        
         #####################
         #### My code end ####
         #####################
@@ -129,6 +130,12 @@ class World():
             self.adjacency = env_dict['adjacency']
             self.locations = env_dict['locations']
             self.symbol_locations = env_dict['symbol_locations']
+            # If option == 2, then we need to be able to distinguish between when pressing button with symbol or regular one
+            if self.option == 2:
+                self.symbol2action = dict(zip(self.symbol_locations, self.n_sym * [self.n_actions + 1]))
+            # If option == 3, then we need to be able to distinguish between all symbols
+            elif self.option == 3:
+                self.symbol2action = dict(zip(self.symbol_locations, range(self.n_actions + 1, self.n_actions + 1 + self.n_sym)))
         #####################
         #### My code end ####
         #####################
@@ -282,10 +289,12 @@ class World():
             # If last action is greater then number of symbols then it means we are in option 2 or 3 and 
             # need to change action id back to 5 to get proper transition
             last_action = walk[-1][2]
-            if last_action > self.n_sym:
+            if last_action > self.n_actions:
                 probe_action = 5
+            else:
+                probe_action = last_action
             # Return the new action                        
-            new_location = int(np.flatnonzero(walk[-1][0]['actions'][probe_action]['transition'])) 
+            new_location = int(np.flatnonzero(walk[-1][0]['actions'][probe_action]['transition']))
             #####################
             #### My code end ####
             #####################
@@ -307,7 +316,23 @@ class World():
         # Build policy from action probability of each action of provided location dictionary
         policy = np.array([action['probability'] for action in new_location['actions']])
         # Add a bias for repeating previous action to walk in straight lines, only if (this is not the first step) and (the previous action was a move)
-        policy[[] if len(walk) == 0 or new_location['id'] == walk[-1][0]['id'] else walk[-1][2]] *= repeat_bias_factor
+        # policy[[] if len(walk) == 0 or new_location['id'] == walk[-1][0]['id'] else walk[-1][2]] *= repeat_bias_factor
+        #####################
+        ### My code start ###
+        #####################
+        # Action 5 means we are pressing button
+        # If last action is greater then number of symbols then it means we are in option 2 or 3 and 
+        # need to change action id back to 5 to get proper transition
+        if len(walk) != 0:
+            last_action = walk[-1][2]
+            if last_action >= self.n_actions:
+                probe_action = 5
+            else:
+                probe_action = last_action
+        #####################
+        #### My code end ####
+        #####################
+        policy[[] if len(walk) == 0 or new_location['id'] == walk[-1][0]['id'] else probe_action] *= repeat_bias_factor
         # And renormalise policy (note that for unavailable actions, the policy was 0 and remains 0, so in that case no renormalisation needed)
         policy = policy / sum(policy) if sum(policy) > 0 else policy
         # Select action in new state
@@ -316,9 +341,11 @@ class World():
         ### My code start ###
         #####################
         # Action 5 means we are pressing button
-        if new_action == 5 and self.env_name == 'first experiment' and new_location in self.symbol_locations:
+        # print('AAAAAAAA', new_action, new_location['id'], self.env_name, self.symbol_locations)
+        if new_action == 5 and self.env_name == 'first experiment' and new_location['id'] in self.symbol_locations:
             if self.option == 2 or self.option == 3:
-                new_action = self.symbol2action[new_action]
+                new_action = self.symbol2action[new_location['id']]
+            # print('WEEE IN, new action', new_action)
         #####################
         #### My code end ####
         #####################
