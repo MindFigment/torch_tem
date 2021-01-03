@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 
 
-def load_model(date, run, envs):
+def load_model(date, run, i_start, option, envs):
     # Choose which trained model to load
     # i_start = 7999
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -19,8 +19,11 @@ def load_model(date, run, envs):
     # Set all paths from existing run 
     _, _, model_path, _, script_path, envs_path = utils.set_directories(date, run)
 
-    path_to_model_weights = glob.glob(f'{model_path}/*.pt')[0]
-    i_start = int(path_to_model_weights.split('_')[-1].split('.')[0])
+    # path_to_model_weights = glob.glob(f'{model_path}/*.pt')[0]
+    # try:
+    #     i_start = int(path_to_model_weights.split('_')[-1].split('.')[0])
+    # except:
+    #     i_start = int(path_to_model_weights.split('_')[-2].split('.')[0])
     
     # Load the model: use import library to import module from specified path
     model_spec = importlib.util.spec_from_file_location('model', script_path + '/model.py')
@@ -28,7 +31,7 @@ def load_model(date, run, envs):
     model_spec.loader.exec_module(model)
     
     # Load the parameters of the model
-    params = torch.load(model_path + '/params_' + str(i_start) + '.pt', map_location=torch.device(device))
+    params = torch.load(model_path + '/params_' + str(i_start) + '_option' + str(option) + '.pt', map_location=torch.device(device))
     # But certain parameters (like total nr of training iterations) may need to be copied from the current set of parameters
     new_params = {
         'device':  device
@@ -41,7 +44,7 @@ def load_model(date, run, envs):
     tem = model.Model(params).to(device)
 
     # Load the model weights after training
-    model_weights = torch.load(model_path + '/tem_' + str(i_start) + '.pt', map_location=torch.device(device))
+    model_weights = torch.load(model_path + '/tem_' + str(i_start) + '_option' + str(option) + '.pt', map_location=torch.device(device))
     # Set the model weights to the loaded trained model weights
     tem.load_state_dict(model_weights)
     
