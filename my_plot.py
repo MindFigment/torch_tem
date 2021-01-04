@@ -3,7 +3,7 @@ from matplotlib.patches import Rectangle
 import numpy as np
 
 
-def plot_rate_maps(cells_firing_rates, symbol_locations, height=5, width=4):
+def plot_rate_maps(cells_firing_rates, symbol_locations, height=5, width=4, savefig=None):
     n_cells = cells_firing_rates.shape[1]
     squared = np.sqrt(n_cells)
     n_rows = int(np.floor(squared))
@@ -23,6 +23,9 @@ def plot_rate_maps(cells_firing_rates, symbol_locations, height=5, width=4):
         for j, sym_loc in enumerate(symbol_locations):
             ax.add_patch(Rectangle(((sym_loc % 4) - 0.45, (sym_loc // 4) - 0.45), 1, 1, edgecolor=colors[j], facecolor='blue', fill=False, lw=1))
             ax.add_patch(Rectangle((j - 0.45, 4 - 0.45), 1, 1, edgecolor=colors[j], facecolor='blue', fill=False, lw=1))
+
+    if savefig is not None and type(savefig) == str:
+        plt.savefig(savefig)
 
     plt.tight_layout()
     plt.show()

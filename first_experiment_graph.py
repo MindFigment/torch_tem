@@ -9,17 +9,14 @@ import world
 
 
 def create_first_experiment_graph(env_name, width, height, n_observations, sym2reward, stay_still):
-    # Action names and ids
-    # STAY_STILL = 'stay_still'
-    # STAY_STILL_ID = 0
-    # UP = 'up'
-    # UP_ID = 1
-    # DOWN = 'down'
-    # DOWN_ID = 3
-    # RIGHT = 'right'
-    # RIGHT_ID = 2
-    # LEFT = 'left'
-    # LEFT_ID = 4
+    id2action = {
+        0: 'stay still',
+        1: 'up',
+        2: 'right',
+        3: 'down',
+        4: 'left',
+        5: 'press button'
+    }
 
     # Number of board locations is equal to the size of the board (width * height)
     board_locations = int(width * height)
@@ -236,6 +233,7 @@ def create_first_experiment_graph(env_name, width, height, n_observations, sym2r
     world_dict['sym2reward'] = sym2reward
     world_dict['env_name'] = env_name
     world_dict['stay_still'] = stay_still
+    world_dict['id2action'] = id2action
 
     # x = 1 / (2 * np.max([width, height]))
     # y = 1 / (2 * np.max([width, height]))
@@ -250,7 +248,6 @@ def create_first_experiment_graph(env_name, width, height, n_observations, sym2r
     #         location['y'] = y + ((i % width) * step)
 
     return world_dict 
-
 
 
 def main():

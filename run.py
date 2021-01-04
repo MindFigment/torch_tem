@@ -46,44 +46,6 @@ def run(load, date, run, option, envs):
     if load:
         tem, params, envs, i_start = load_model(date, run, 3999, option, envs)
         run_path, train_path, model_path, save_path, script_path, envs_path = utils.set_directories(date, run)
-    # Either load a trained model and continue training, or start afresh
-    # if load:
-    #     # Choose which trained model to load
-    #     # date = '2020-10-06' # 2020-07-05 run 0 for successful node agent
-    #     # run = '2'
-    #     # i_start = 40
-    #     path_to_model_weights = glob.glob(f'../Summaries/{date}/{run}/save/*.pt')[0]
-    #     i_start = path_to_model_weights.split('_')[-1].split('.')[0]
-        
-    #     # Set all paths from existing run 
-    #     run_path, train_path, model_path, save_path, script_path, envs_path = utils.set_directories(date, run)
-        
-    #     # Load the model: use import library to import module from specified path
-    #     model_spec = importlib.util.spec_from_file_location('model', script_path + '/model.py')
-    #     model = importlib.util.module_from_spec(model_spec)
-    #     model_spec.loader.exec_module(model)
-        
-    #     # Load the parameters of the model
-    #     params = torch.load(model_path + '/params_' + str(i_start) + '.pt')
-    #     # But certain parameters (like total nr of training iterations) may need to be copied from the current set of parameters
-    #     new_params = {'train_it': 40000}
-    #     # Update those in params
-    #     for key in new_params:
-    #         params[key] = new_params[key]
-        
-    #     # Create a new tem model with the loaded parameters
-    #     tem = model.Model(params).to(device)
-
-    #     # Load the model weights after training
-    #     model_weights = torch.load(model_path + '/tem_' + str(i_start) + '.pt')
-    #     # Set the model weights to the loaded trained model weights
-    #     tem.load_state_dict(model_weights)
-        
-    #     # Make list of all the environments that this model was trained on
-    #     envs = list(glob.iglob(envs_path + '/*'))
-        
-    #     # And increase starting iteration by 1, since the loaded model already carried out the current starting iteration
-    #     i_start = i_start + 1
     else:
         # Start training from step 0
         i_start = 0

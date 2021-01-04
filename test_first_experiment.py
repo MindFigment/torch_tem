@@ -8,9 +8,10 @@ import click
 from datetime import datetime
 import glob
 import copy
+from pprint import pprint
 
 import analyse
-from my_utils import load_model
+from my_utils import load_model, n_shot
 import world
 import plot
 from my_plot import plot_rate_maps
@@ -23,11 +24,13 @@ from my_plot import plot_rate_maps
 # @click.argument('envs', nargs=-1)
 def test_first_experiment():
 
-    date = '2020-12-17'
-    run = '0'
-    i_start = 2000
-    option = 1
+    date = '2021-01-03'
+    run = '2'
+    i_start = 9999
+    option = 3
     envs = ['first-experiment4x4']
+    how_long = 30
+    savefig = date + '_run' + run + '_option' + str(option) + '_' + str(i_start)
 
     tem, params, _, _ = load_model(date, run, i_start, option, envs)
     tem.eval()
@@ -39,7 +42,7 @@ def test_first_experiment():
     # Select environments from the environments included in training
     environments = [world.World(graph, randomise_observations=True, option=option, shiny=None) for env_i, graph in enumerate(np.random.choice(envs, n_walks))]
     # Determine the length of each walk
-    walk_len = np.median([env.n_locations * 30 for env in environments]).astype(int)
+    walk_len = np.median([env.n_locations * how_long for env in environments]).astype(int)
     # And generate walks for each environment
     walks = [env.generate_walks(walk_len, 1)[0] for env in environments]
 
@@ -87,32 +90,47 @@ def test_first_experiment():
           ', '.join('{:.2f}%'.format(occ) for occ in occupation[env_to_plot] / np.sum(occupation[env_to_plot]) * 100) +
           ' (1% = {:.2f} visits)'.format(np.sum(occupation[env_to_plot])/ 100))
 
-    # # Generate rate maps
-    # g, p = analyse.rate_map(forward, tem, environments)
+    ##############
+    ### n-shot ###
+    ##############
+    # correct_nshot_from_symbol, correct_nshot_from_reward, correct_nshot_from_other = n_shot(forward, tem, environments, include_stay_still)[env_to_plot]
+    # print('\nCorrect n-shot from symbol location')
+    # pprint(correct_nshot_from_symbol)
+    # print('\nCorrect n-shot from reward location')
+    # pprint(correct_nshot_from_reward)
+    # print('\nCorrect n-shot from other location')
+    # pprint(correct_nshot_from_other)
 
-    # print(len(g), len(g[env_to_plot]), g[env_to_plot][module_to_plot].shape)
-    # print(len(p), len(p[env_to_plot]), p[env_to_plot][module_to_plot].shape)
+    ##########################
+    ### Generate rate maps ###
+    ##########################
+    g, p = analyse.rate_map(forward, tem, environments)
 
-    # #################
-    # #################
-    # #################
+    print(len(g), len(g[env_to_plot]), g[env_to_plot][module_to_plot].shape)
+    print(len(p), len(p[env_to_plot]), p[env_to_plot][module_to_plot].shape)
 
     # plot_rate_maps(g[env_to_plot][module_to_plot], 
     #                environments[env_to_plot].symbol_locations,
     #                environments[env_to_plot].height + 1,
-    #                environments[env_to_plot].width)
+    #                environments[env_to_plot].width,
+    #                './figs/rate_map_' + savefig)
 
-    # #################
-    # #################
-    # #################
+    plot_rate_maps(g[env_to_plot][module_to_plot], 
+                   environments[env_to_plot].symbol_locations,
+                   environments[env_to_plot].height + 1,
+                   environments[env_to_plot].width)
 
-    # Calculate accuracy leaving from and arriving to each location
+    #####################################################################
+    ### Calculate accuracy leaving from and arriving to each location ###
+    #####################################################################
     from_acc, to_acc = analyse.location_accuracy(forward, tem, environments)
 
     print('From acc: ' + ', '.join('{:.2f}%'.format(acc * 100) for acc in from_acc[env_to_plot]))
     print('To acc  : ' + ', '.join('{:.2f}%'.format(acc * 100) for acc in to_acc[env_to_plot]))
 
-    # Plot results of agent comparison and zero-shot inference analysis
+    #########################################################################
+    ### Plot results of agent comparison and zero-shot inference analysis ###
+    #########################################################################
     filt_size = 41
     plt.figure()
     plt.plot(analyse.smooth(np.mean(np.array([env for env_i, env in enumerate(correct_model) if envs_to_avg[env_i]]),0)[1:], filt_size), label='tem')
@@ -121,6 +139,7 @@ def test_first_experiment():
     plt.ylim(0, 1.05)
     plt.legend()
     plt.title('Zero-shot inference: ' + str(np.mean([np.mean(env) for env_i, env in enumerate(zero_shot) if envs_to_avg[env_i]]) * 100) + '%')
+    # plt.savefig('./figs/comparison_' + savefig)
     plt.show()
 
     # # Plot accuracy separated by location

@@ -51,6 +51,7 @@ class World():
         except:
             self.env_name = 'grid'
         if self.env_name == 'first experiment':
+            self.id2action = { int(k): str(v) for k,v in env['id2action'].items() }
             self.width = env['width']
             self.height = env['height']
             self.stay_still = env['stay_still']

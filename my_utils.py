@@ -5,6 +5,10 @@ import click
 import utils
 import os
 from datetime import datetime
+import numpy as np
+from collections import defaultdict
+import torch
+import copy
 
 
 def load_model(date, run, i_start, option, envs):
@@ -61,6 +65,85 @@ def load_model(date, run, i_start, option, envs):
     i_start = i_start + 1
 
     return tem, params, envs, i_start
+
+
+# Measure n-shot inference for this model: see if it can predict an observation following a new action to a know location (zero-shot)
+def n_shot(forward, model, environments, include_stay_still=False):
+    # Get the number of actions in this model
+    n_actions = model.hyper['n_actions'] + model.hyper['has_static_action']
+    # Track for all opportunities for n-shot inference if the predictions were correct across environments
+    all_correct = []
+    # Run through environments and check for n-shot inference in each of them
+    for env_i, env in enumerate(environments):
+        symbol_locations = env.symbol_locations
+        reward_locations = env.reward_locations
+        # Keep track for each location whether it has been visited
+        location_visited = np.zeros(env.n_locations)
+        # And for each action in each location whether it has been taken
+        action_taken = np.zeros((env.n_locations, n_actions))
+        # Make list that for all opportunities for n-shot inference tracks if the predictions were correct
+        correct_nshot_from_symbol = defaultdict(lambda: {
+                                                        #  'n-shot': 
+                                                        #     {
+                                                        #      'up': {10: None, 11: None, 20: None, 21: None, 22: None},
+                                                        #      'down': {10: None, 11: None, 20: None, 21: None, 22: None},
+                                                        #      'left': {10: None, 11: None, 20: None, 21: None, 22: None},
+                                                        #      'right': {10: None, 11: None, 20: None, 21: None, 22: None},
+                                                        #      'press button': {10: None, 11: None, 20: None, 21: None, 22: None}
+                                                        #     },
+                                                        #  'count': 0
+                                                        # })
+                                                        # {
+                                                         'n-shot': 
+                                                            {
+                                                             'up': {},
+                                                             'down': {},
+                                                             'left': {},
+                                                             'right': {},
+                                                             'press button': {}
+                                                            },
+                                                         'count': 0
+                                                        })
+        correct_nshot_from_reward = copy.deepcopy(correct_nshot_from_symbol)
+        correct_nshot_from_other = copy.deepcopy(correct_nshot_from_symbol)
+        # Get the very first iteration
+        prev_iter = forward[0]
+        prev_pred = False
+        # Run through iterations of forward pass to check when an action is taken for the first time
+        for step in forward[1:]:
+            # Get the previous action and previous location location
+            prev_a, prev_g = prev_iter.a[env_i], prev_iter.g[env_i]['id']
+            # If the previous action was standing still: only count as valid transition standing still actions are included as zero-shot inference
+            if model.hyper['has_static_action'] and prev_a == 0 and not include_stay_still:
+                prev_a = None
+            # Mark the location of the previous iteration as visited
+            location_visited[prev_g] += 1
+            # Find whether the prediction was correct
+            prediction_result = bool(torch.argmax(step.x_gen[2][env_i]) == torch.argmax(step.x[env_i])) # .numpy()
+            # Zero shot inference occurs when the current location was visited, but the previous action wasn't taken before
+            n_loc_visited = location_visited[step.g[env_i]['id']]
+            if n_loc_visited >= 0 and n_loc_visited <= 3 and prev_a is not None: # and action_taken[prev_g, prev_a] == 0:
+                    n_action_taken = action_taken[prev_g, prev_a]
+                    key = int(10 * n_loc_visited + n_action_taken)
+                    if prev_g in symbol_locations:
+                        correct_nshot_from_symbol[prev_g]['n-shot'][env.id2action[prev_a]][key] = (prediction_result, prev_pred)
+                        correct_nshot_from_symbol[prev_g]['count'] += 1
+                    elif prev_g in reward_locations:
+                        correct_nshot_from_reward[prev_g]['n-shot'][env.id2action[prev_a]][key] = (prediction_result, prev_pred)
+                        correct_nshot_from_reward[prev_g]['count'] += 1
+                    else:
+                        correct_nshot_from_other[prev_g]['n-shot'][env.id2action[prev_a]][key] = (prediction_result, prev_pred)
+                        correct_nshot_from_other[prev_g]['count'] += 1
+            prev_pred = prediction_result
+            # Update the previous action as taken
+            if prev_a is not None:
+                action_taken[prev_g, prev_a] += 1
+            # And update the previous iteration to the current iteration
+            prev_iter = step
+        # Having gone through the full forward pass for one environment, add the zero-shot performance to the list of all 
+        all_correct.append([correct_nshot_from_symbol, correct_nshot_from_reward, correct_nshot_from_other])
+    # Return lists of success of zero-shot inference for all environments
+    return all_correct
 
 
 def make_lstm_directories():
